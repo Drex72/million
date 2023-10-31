@@ -1,0 +1,28 @@
+name: Close Kitchen Issues
+
+
+on:
+  schedule:
+    - cron: '*/5 * * * *' 
+
+jobs:
+  close_issues:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v2
+
+      - name: Close Kitchen Issues
+        run: |
+          # Get the list of open issues with titles starting with "kitchen"
+          ISSUES=$(curl -s "https://api.github.com/repos/$GITHUB_REPOSITORY/issues?state=open" | jq -r 'map(select(.title | startswith("kitchen"))) | .[].number')
+
+          if [ -n "$ISSUES" ]; then
+            for ISSUE in $ISSUES; do
+              # Close the issue by adding a comment and closing it
+              curl -X POST -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/$GITHUB_REPOSITORY/issues/$ISSUE/comments" -d '{"body":"Closing this issue because it matches the criteria."}'
+              curl -X PATCH -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/$GITHUB_REPOSITORY/issues/$ISSUE" -d '{"state":"closed"}'
+            done
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
